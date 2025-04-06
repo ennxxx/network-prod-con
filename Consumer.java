@@ -24,6 +24,15 @@ public class Consumer {
             }
         }).start();
 
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            try {
+                deleteDirectory(new File(OUTPUT_DIR));
+                System.out.println("\nOutput directory deleted on shutdown...");
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }));
+
         try (ServerSocket serverSocket = new ServerSocket(port)) {
             System.out.println("Waiting for Producer...");
 
@@ -170,5 +179,18 @@ public class Consumer {
             this.fileName = fileName;
             this.bytes = bytes;
         }
+    }
+
+    private static void deleteDirectory(File directory) throws IOException {
+        if (directory.isDirectory()) {
+            for (File file : directory.listFiles()) {
+                if (file.isDirectory()) {
+                    deleteDirectory(file);
+                } else {
+                    file.delete();
+                }
+            }
+        }
+        directory.delete();
     }
 }
