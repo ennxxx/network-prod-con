@@ -6,22 +6,6 @@ import java.util.*;
 public class Consumer {
     private static final String OUTPUT_DIR = "output";
 
-    private static void deleteDirectory(File directory) {
-        if (directory.exists()) {
-            File[] files = directory.listFiles();
-            if (files != null) {
-                for (File file : files) {
-                    if (file.isDirectory()) {
-                        deleteDirectory(file);
-                    } else {
-                        file.delete();
-                    }
-                }
-            }
-            directory.delete();
-        }
-    }
-
     public static void main(String[] args) {
         int port = 12345;
 
@@ -36,17 +20,6 @@ public class Consumer {
             int p = in.readInt();
             int c = in.readInt();
             int q = in.readInt();
-
-            // Create the output directory (or overwrite it)
-            File outputDirectory = new File(OUTPUT_DIR);
-            if (outputDirectory.exists()) {
-                // If it exists, delete the directory and all contents
-                deleteDirectory(outputDirectory);
-            }
-            // Create a new empty output directory
-            if (!outputDirectory.exists()) {
-                outputDirectory.mkdirs();
-            }
 
             // This is to hold the file data that consumer threads will process
             // Consumer will block when the queue is empty (waiting for new files)
