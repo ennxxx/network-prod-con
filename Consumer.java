@@ -111,7 +111,10 @@ public class Consumer {
             }
 
             executor.shutdown();
-            executor.awaitTermination(10, TimeUnit.SECONDS);
+            boolean terminated = executor.awaitTermination(30, TimeUnit.SECONDS); // Increased timeout
+            if (!terminated) {
+                System.out.println("Warning: Executor did not terminate within the specified time.");
+            }
 
             System.out.println("\n=== Upload Complete ===");
             System.out.println("Files in order of arrival:");

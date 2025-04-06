@@ -68,36 +68,36 @@ public class Producer {
             for (int i = 0; i < producerThreads; i++) {
                 final int index = i + 1;
                 threads[i] = new Thread(() -> {
-                    File folder = new File(INPUT_DIR + "/prod" + index);
-                    if (!folder.exists() || !folder.isDirectory()) {
-                        System.out.println("Error: Folder " + folder.getPath() + " does not exist or is not a directory.");
-                        continue; // Skip this producer thread if the folder doesn't exist
-                    }
-                    File[] files = folder.listFiles();
+                File folder = new File(INPUT_DIR + "/prod" + index);
+                if (!folder.exists() || !folder.isDirectory()) {
+                    System.out.println("Error: Folder " + folder.getPath() + " does not exist or is not a directory.");
+                    return; // Exit the thread early if the folder doesn't exist
+                }
+                File[] files = folder.listFiles();
 
-                    if (files != null) {
-                        for (File file : files) {
-                            try {
-                                // This makes sure that multiple threads don't write to the output stream at the same time
-                                synchronized (out) {
-                                    out.writeUTF(file.getName()); // File name
-                                    out.writeLong(file.length()); // File size
-                                    
-                                    FileInputStream fis = new FileInputStream(file);
-                                    byte[] buffer = new byte[4096];
-                                    int bytesRead;
-                                    while ((bytesRead = fis.read(buffer)) != -1) {
-                                        out.write(buffer, 0, bytesRead);
-                                    }
-                                    fis.close();
-                                    System.out.println("Sent: " + file.getName());
+                if (files != null) {
+                    for (File file : files) {
+                        try {
+                            // This makes sure that multiple threads don't write to the output stream at the same time
+                            synchronized (out) {
+                                out.writeUTF(file.getName()); // File name
+                                out.writeLong(file.length()); // File size
+                                
+                                FileInputStream fis = new FileInputStream(file);
+                                byte[] buffer = new byte[4096];
+                                int bytesRead;
+                                while ((bytesRead = fis.read(buffer)) != -1) {
+                                    out.write(buffer, 0, bytesRead);
                                 }
-                            } catch (IOException e) {
-                                e.printStackTrace();
+                                fis.close();
+                                System.out.println("Sent: " + file.getName());
                             }
+                        } catch (IOException e) {
+                            e.printStackTrace();
                         }
                     }
-                });
+                }
+            });
                 threads[i].start();
             }
             // Wait for all producer threads to finish
@@ -107,12 +107,14 @@ public class Producer {
 
             // Send this signal to the consumer to indicate that all files have been sent
             out.writeUTF("END");
-            out.close();
-
+            
+            // Ensure the consumer has received the END signal before closing
+            System.out.println("All files sent. Closing connection.");
+            out.flush(); // Ensure all data is written out before closing
+            out.close();  // Close after sending the "END" signal
         } catch (Exception e) {
             e.printStackTrace();
         }
-
         scanner.close();
     }
 }
