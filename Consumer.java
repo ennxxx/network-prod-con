@@ -93,7 +93,7 @@ public class Consumer {
                 if (!queue.offer(fd)) {
                     System.out.println("Dropped: " + fileName + " (Queue full)");
                 } else {
-                    System.out.println("Received: " + fileName " at " + now);
+                    System.out.println("Received: " + fileName + " at " + now);
                 }
             }
 

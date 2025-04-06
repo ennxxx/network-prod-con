@@ -93,7 +93,7 @@ public class Producer {
                                         out.write(buffer, 0, bytesRead);
                                     }
                                     fis.close();
-                                    System.out.println("Sent: " + file.getName() " at " + now);
+                                    System.out.println("Sent: " + file.getName() + " at " + now);
                                 }
                             } catch (IOException e) {
                                 e.printStackTrace();
