@@ -53,7 +53,7 @@ public class Producer {
         }
 
         // Connecting to the consumer
-        String serverIp = "172.16.146.131"; // Replace with VM IP address
+        String serverIp = "192.168.231.128"; // Replace with VM IP address
         int port = 12345;
 
         try (Socket socket = new Socket(serverIp, port)) {
