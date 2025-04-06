@@ -113,8 +113,8 @@
   </div>
 
   <script>
-    // Global variable to track loaded videos
-    const loadedVideos = new Set();
+     // Global variable to track loaded videos
+     const loadedVideos = new Set();
     let hoverTimeout;
     let previewTimeout;
 
@@ -128,15 +128,17 @@
       
       const vid = document.createElement('video');
       vid.src = `/videos/${videoData.name}`;
-      vid.preload = 'metadata';
+      vid.preload = "metadata"; // Only load metadata initially
       vid.muted = true;
       
       // Show preview on hover
       vid.addEventListener('mouseenter', () => {
         hoverTimeout = setTimeout(() => {
-          vid.currentTime = 0;
-          vid.play();
-          previewTimeout = setTimeout(() => vid.pause(), 10000);
+          if (vid.readyState >= 2) { // At least metadata loaded
+            vid.currentTime = 0;
+            vid.play().catch(e => console.log("Preview play error:", e));
+            previewTimeout = setTimeout(() => vid.pause(), 10000);
+          }
         }, 500);
       });
       
@@ -148,14 +150,50 @@
       });
       
       // Open fullscreen player on click
-      vid.addEventListener('click', () => {
+      vid.addEventListener('click', async () => {
         const player = document.getElementById('player');
         const fullscreenVideo = document.getElementById('fullscreen-video');
-        fullscreenVideo.src = vid.src;
-        fullscreenVideo.currentTime = vid.currentTime;
-        fullscreenVideo.muted = false;
+        const loadingIndicator = document.createElement('div');
+        
+        // Show loading state
+        loadingIndicator.textContent = "Loading video...";
+        loadingIndicator.style.color = "white";
+        loadingIndicator.style.fontSize = "20px";
+        player.innerHTML = "";
+        player.appendChild(loadingIndicator);
         player.style.display = 'flex';
-        fullscreenVideo.play();
+        
+        // Preload more of the video before playing
+        fullscreenVideo.src = vid.src;
+        fullscreenVideo.preload = "auto";
+        fullscreenVideo.muted = false;
+        
+        // Wait for enough data to play smoothly
+        fullscreenVideo.addEventListener('canplay', () => {
+          player.removeChild(loadingIndicator);
+          player.innerHTML = `
+            <span class="close-player" onclick="closePlayer()">&times;</span>
+            <video id="fullscreen-video" controls></video>
+          `;
+          document.getElementById('fullscreen-video').src = vid.src;
+          document.getElementById('fullscreen-video').currentTime = vid.currentTime;
+          document.getElementById('fullscreen-video').play()
+            .catch(e => console.log("Fullscreen play error:", e));
+        }, { once: true });
+        
+        // Fallback if canplay takes too long
+        setTimeout(() => {
+          if (player.contains(loadingIndicator)) {
+            player.removeChild(loadingIndicator);
+            player.innerHTML = `
+              <span class="close-player" onclick="closePlayer()">&times;</span>
+              <video id="fullscreen-video" controls></video>
+            `;
+            document.getElementById('fullscreen-video').src = vid.src;
+            document.getElementById('fullscreen-video').play()
+              .catch(e => console.log("Fallback play error:", e));
+          }
+        }, 3000);
       });
       
       const title = document.createElement('div');

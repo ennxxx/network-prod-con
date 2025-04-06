@@ -37,6 +37,8 @@ public class VideoServer {
             File file = new File(videoDir, path);
             if (file.exists()) {
                 exchange.getResponseHeaders().add("Content-Type", "video/mp4");
+                exchange.getResponseHeaders().add("Accept-Ranges", "bytes");
+                exchange.getResponseHeaders().add("Content-Length", String.valueOf(file.length()));
                 exchange.sendResponseHeaders(200, file.length());
                 Files.copy(file.toPath(), exchange.getResponseBody());
             } else {
