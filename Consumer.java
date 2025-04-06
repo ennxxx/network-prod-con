@@ -6,7 +6,6 @@ import java.util.*;
 public class Consumer {
     private static final String OUTPUT_DIR = "output";
 
-    // Method to delete a directory and its contents recursively
     private static void deleteDirectory(File directory) {
         if (directory.exists()) {
             File[] files = directory.listFiles();
@@ -30,10 +29,9 @@ public class Consumer {
             System.out.println("Waiting for Producer...");
 
             Socket socket = serverSocket.accept();
-            System.out.println("\n=== Connected to Producer ===");
+            System.out.println("Connected to Producer!");
 
             DataInputStream in = new DataInputStream(socket.getInputStream());
-            DataOutputStream out = new DataOutputStream(socket.getOutputStream());
 
             int p = in.readInt();
             int c = in.readInt();
@@ -51,6 +49,8 @@ public class Consumer {
             }
 
             // This is to hold the file data that consumer threads will process
+            // Consumer will block when the queue is empty (waiting for new files)
+            // Queue will not exceed the size specified by the user
             BlockingQueue<FileData> queue = new ArrayBlockingQueue<>(q);
             List<String> arrivalOrder = Collections.synchronizedList(new ArrayList<>());
 
@@ -80,9 +80,7 @@ public class Consumer {
             // Read incoming files from Producer
             while (true) {
                 String fileName = in.readUTF();
-                if (fileName.equals("END")) {
-                    break; // End signal from Producer
-                }
+                if (fileName.equals("END")) break;
 
                 long fileSize = in.readLong();
                 byte[] fileData = new byte[(int) fileSize];
@@ -105,25 +103,19 @@ public class Consumer {
                 }
             }
 
-            // Stop consumers by sending the poison pill
+            // Stop consumers
             for (int i = 0; i < c; i++) {
                 queue.offer(FileData.POISON_PILL);
             }
 
             executor.shutdown();
-            boolean terminated = executor.awaitTermination(30, TimeUnit.SECONDS); // Increased timeout
-            if (!terminated) {
-                System.out.println("Warning: Executor did not terminate within the specified time.");
-            }
+            executor.awaitTermination(10, TimeUnit.SECONDS);
 
             System.out.println("\n=== Upload Complete ===");
             System.out.println("Files in order of arrival:");
             for (String name : arrivalOrder) {
                 System.out.println(name);
             }
-
-            // Close the socket after finishing the file processing
-            socket.close(); 
 
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();

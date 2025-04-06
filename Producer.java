@@ -8,12 +8,12 @@ public class Producer {
 
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
+        
+        int producerThreads = 0;
+        int consumerThreads = 0;
+        int queueSize = 0;
 
-        int producerThreads = 0, consumerThreads = 0, queueSize = 0;
-
-        System.out.println("Starting Producer...");
-
-        // Input validation for producer threads
+         // Input validation for producer threads
         while (true) {
             System.out.print("Enter number of producer threads: ");
             producerThreads = scanner.nextInt();
@@ -55,7 +55,7 @@ public class Producer {
         int port = 12345;
 
         try (Socket socket = new Socket(serverIp, port)) {
-            System.out.println("\n=== Connected to Consumer ===");
+            System.out.println("Connected to Consumer!");
 
             // Send user inputs to the consumer
             DataOutputStream out = new DataOutputStream(socket.getOutputStream());
@@ -68,36 +68,32 @@ public class Producer {
             for (int i = 0; i < producerThreads; i++) {
                 final int index = i + 1;
                 threads[i] = new Thread(() -> {
-                File folder = new File(INPUT_DIR + "/prod" + index);
-                if (!folder.exists() || !folder.isDirectory()) {
-                    System.out.println("Error: Folder " + folder.getPath() + " does not exist or is not a directory.");
-                    return; // Exit the thread early if the folder doesn't exist
-                }
-                File[] files = folder.listFiles();
+                    File folder = new File(INPUT_DIR + "/prod" + index);
+                    File[] files = folder.listFiles();
 
-                if (files != null) {
-                    for (File file : files) {
-                        try {
-                            // This makes sure that multiple threads don't write to the output stream at the same time
-                            synchronized (out) {
-                                out.writeUTF(file.getName()); // File name
-                                out.writeLong(file.length()); // File size
-                                
-                                FileInputStream fis = new FileInputStream(file);
-                                byte[] buffer = new byte[4096];
-                                int bytesRead;
-                                while ((bytesRead = fis.read(buffer)) != -1) {
-                                    out.write(buffer, 0, bytesRead);
+                    if (files != null) {
+                        for (File file : files) {
+                            try {
+                                // This makes sure that multiple threads don't write to the output stream at the same time
+                                synchronized (out) {
+                                    out.writeUTF(file.getName()); // File name
+                                    out.writeLong(file.length()); // File size
+                                    
+                                    FileInputStream fis = new FileInputStream(file);
+                                    byte[] buffer = new byte[4096];
+                                    int bytesRead;
+                                    while ((bytesRead = fis.read(buffer)) != -1) {
+                                        out.write(buffer, 0, bytesRead);
+                                    }
+                                    fis.close();
+                                    System.out.println("Sent: " + file.getName());
                                 }
-                                fis.close();
-                                System.out.println("Sent: " + file.getName());
+                            } catch (IOException e) {
+                                e.printStackTrace();
                             }
-                        } catch (IOException e) {
-                            e.printStackTrace();
                         }
                     }
-                }
-            });
+                });
                 threads[i].start();
             }
             // Wait for all producer threads to finish
@@ -107,14 +103,11 @@ public class Producer {
 
             // Send this signal to the consumer to indicate that all files have been sent
             out.writeUTF("END");
-            
-            // Ensure the consumer has received the END signal before closing
-            System.out.println("All files sent. Closing connection.");
-            out.flush(); // Ensure all data is written out before closing
-            out.close();  // Close after sending the "END" signal
+
         } catch (Exception e) {
             e.printStackTrace();
         }
+
         scanner.close();
     }
 }
