@@ -21,6 +21,9 @@ public class Consumer {
             int c = in.readInt();
             int q = in.readInt();
 
+            // This is to hold the file data that consumer threads will process
+            // Consumer will block when the queue is empty (waiting for new files)
+            // Queue will not exceed the size specified by the user
             BlockingQueue<FileData> queue = new ArrayBlockingQueue<>(q);
             List<String> arrivalOrder = Collections.synchronizedList(new ArrayList<>());
 
@@ -30,9 +33,10 @@ public class Consumer {
                 executor.submit(() -> {
                     while (true) {
                         try {
-                            FileData data = queue.take();
-                            if (data == FileData.POISON_PILL) break;
+                            FileData data = queue.take(); // Blocks thread until data is available
+                            if (data == FileData.POISON_PILL) break; // Signals to stop processing
 
+                            // Process the file data by writing it to the output directory
                             File outputFile = new File(OUTPUT_DIR + "/" + data.fileName);
                             FileOutputStream fos = new FileOutputStream(outputFile);
                             fos.write(data.bytes);
@@ -61,6 +65,9 @@ public class Consumer {
                     totalRead += read;
                 }
 
+                // This inserts file data into the queue
+                // If the queue is full, the file will be dropped
+                // and a message will be printed to the console
                 FileData fd = new FileData(fileName, fileData);
                 if (!queue.offer(fd)) {
                     System.out.println("Dropped: " + fileName + " (Queue full)");

@@ -18,24 +18,31 @@ public class Producer {
         System.out.print("Enter max queue size: ");
         int queueSize = scanner.nextInt();
 
+        // Need to add more validation checks
         if (producerThreads > MAX_PRODUCER_FOLDERS) {
             System.out.println("Error: Only " + MAX_PRODUCER_FOLDERS + " input folders are available.");
             scanner.close();
             return;
+        } else if (producerThreads > 0 || consumerThreads > 0 || queueSize > 0) {
+            System.out.println("Error: Number of threads and queue size must be positive.");
+            scanner.close();
+            return;
         }
 
-        String serverIp = "172.16.146.131"; // VM IP
+        // Connecting to the consumer
+        String serverIp = "172.16.146.131"; // Replace with VM IP address
         int port = 12345;
 
         try (Socket socket = new Socket(serverIp, port)) {
             System.out.println("Connected to Consumer!");
 
+            // Send user inputs to the consumer
             DataOutputStream out = new DataOutputStream(socket.getOutputStream());
             out.writeInt(producerThreads);
             out.writeInt(consumerThreads);
             out.writeInt(queueSize);
 
-            // Start producer threads
+            // Create an array of threads and assign each thread to a folder
             Thread[] threads = new Thread[producerThreads];
             for (int i = 0; i < producerThreads; i++) {
                 final int index = i + 1;
@@ -46,10 +53,11 @@ public class Producer {
                     if (files != null) {
                         for (File file : files) {
                             try {
+                                // This makes sure that multiple threads don't write to the output stream at the same time
                                 synchronized (out) {
-                                    out.writeUTF(file.getName());
-                                    out.writeLong(file.length());
-
+                                    out.writeUTF(file.getName()); // File name
+                                    out.writeLong(file.length()); // File size
+                                    
                                     FileInputStream fis = new FileInputStream(file);
                                     byte[] buffer = new byte[4096];
                                     int bytesRead;
@@ -67,12 +75,12 @@ public class Producer {
                 });
                 threads[i].start();
             }
-
+            // Wait for all producer threads to finish
             for (Thread t : threads) {
                 t.join();
             }
 
-            // Signal end of transmission
+            // Send this signal to the consumer to indicate that all files have been sent
             out.writeUTF("END");
 
         } catch (Exception e) {
