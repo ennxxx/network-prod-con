@@ -15,6 +15,11 @@
       border-bottom: 1px solid #eee;
       padding-bottom: 10px;
     }
+    #status {
+      font-size: 0.8em;
+      color: #666;
+      font-weight: normal;
+    }
     .video-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
@@ -43,6 +48,7 @@
       height: 100%;
       object-fit: cover;
       background: #000;
+      cursor: pointer;
     }
     .video-title {
       padding: 10px;
@@ -88,12 +94,17 @@
     .refresh-btn:hover {
       background: #3367d6;
     }
+    .video-time {
+      padding: 0 10px 10px;
+      font-size: 0.8em;
+      color: #666;
+    }
   </style>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
 </head>
 <body>
-  <h1>Uploaded Videos</h1>
-  <button class="refresh-btn" onclick="loadVideos()">Refresh Videos</button>
+  <h1>Uploaded Videos <span id="status">(Waiting for videos...)</span></h1>
+  <button class="refresh-btn" onclick="loadInitialVideos()">Refresh Videos</button>
   <div class="video-grid" id="videos"></div>
 
   <div class="video-player" id="player">
@@ -102,67 +113,114 @@
   </div>
 
   <script>
+    // Global variable to track loaded videos
+    const loadedVideos = new Set();
     let hoverTimeout;
     let previewTimeout;
 
-    async function loadVideos() {
+    // Function to create a video card
+    function createVideoCard(videoData) {
+      const card = document.createElement('div');
+      card.className = 'video-card';
+      
+      const thumbnail = document.createElement('div');
+      thumbnail.className = 'video-thumbnail';
+      
+      const vid = document.createElement('video');
+      vid.src = `/videos/${videoData.name}`;
+      vid.preload = 'metadata';
+      vid.muted = true;
+      
+      // Show preview on hover
+      vid.addEventListener('mouseenter', () => {
+        hoverTimeout = setTimeout(() => {
+          vid.currentTime = 0;
+          vid.play();
+          previewTimeout = setTimeout(() => vid.pause(), 10000);
+        }, 500);
+      });
+      
+      // Stop preview when mouse leaves
+      vid.addEventListener('mouseleave', () => {
+        clearTimeout(hoverTimeout);
+        clearTimeout(previewTimeout);
+        vid.pause();
+      });
+      
+      // Open fullscreen player on click
+      vid.addEventListener('click', () => {
+        const player = document.getElementById('player');
+        const fullscreenVideo = document.getElementById('fullscreen-video');
+        fullscreenVideo.src = vid.src;
+        fullscreenVideo.currentTime = vid.currentTime;
+        fullscreenVideo.muted = false;
+        player.style.display = 'flex';
+        fullscreenVideo.play();
+      });
+      
+      const title = document.createElement('div');
+      title.className = 'video-title';
+      title.textContent = videoData.name.replace('.mp4', '');
+      
+      const time = document.createElement('div');
+      time.className = 'video-time';
+      time.textContent = `Uploaded: ${formatTimestamp(videoData.time)}`;
+      
+      thumbnail.appendChild(vid);
+      card.appendChild(thumbnail);
+      card.appendChild(title);
+      card.appendChild(time);
+      
+      return card;
+    }
+
+    function formatTimestamp(timestamp) {
+      // If it's already a formatted string, return as-is
+      if (isNaN(timestamp)) return timestamp;
+      
+      // If it's a Unix timestamp in milliseconds
+      const date = new Date(parseInt(timestamp));
+      return date.toLocaleString();
+    }
+
+    // Function to add a single video
+    function addVideo(videoData) {
+      if (loadedVideos.has(videoData.name)) return;
+      loadedVideos.add(videoData.name);
+      
+      document.getElementById('status').textContent = `(${loadedVideos.size} videos)`;
+      
+      const container = document.getElementById('videos');
+      const card = createVideoCard(videoData);
+      container.prepend(card);
+    }
+
+    // Function to load initial videos
+    async function loadInitialVideos() {
       try {
         const res = await fetch('/list');
         const videoList = await res.json();
-        const container = document.getElementById('videos');
-        container.innerHTML = '';
-
-        videoList.forEach(name => {
-          const card = document.createElement('div');
-          card.className = 'video-card';
-          
-          const thumbnail = document.createElement('div');
-          thumbnail.className = 'video-thumbnail';
-          
-          const vid = document.createElement('video');
-          vid.src = `/videos/${name}`;
-          vid.preload = 'metadata';
-          vid.muted = true;
-          
-          // Show preview on hover
-          vid.addEventListener('mouseenter', () => {
-            hoverTimeout = setTimeout(() => {
-              vid.currentTime = 0;
-              vid.play();
-              previewTimeout = setTimeout(() => vid.pause(), 10000);
-            }, 500);
-          });
-          
-          // Stop preview when mouse leaves
-          vid.addEventListener('mouseleave', () => {
-            clearTimeout(hoverTimeout);
-            clearTimeout(previewTimeout);
-            vid.pause();
-          });
-          
-          // Open fullscreen player on click
-          vid.addEventListener('click', () => {
-            const player = document.getElementById('player');
-            const fullscreenVideo = document.getElementById('fullscreen-video');
-            fullscreenVideo.src = vid.src;
-            fullscreenVideo.currentTime = vid.currentTime;
-            fullscreenVideo.muted = false;
-            player.style.display = 'flex';
-            fullscreenVideo.play();
-          });
-          
-          const title = document.createElement('div');
-          title.className = 'video-title';
-          title.textContent = name.replace('.mp4', '');
-          
-          thumbnail.appendChild(vid);
-          card.appendChild(thumbnail);
-          card.appendChild(title);
-          container.appendChild(card);
-        });
+        document.getElementById('videos').innerHTML = ''; // Clear existing
+        loadedVideos.clear(); // Reset loaded videos set
+        videoList.reverse().forEach(addVideo); // Add existing videos
       } catch (error) {
         console.error('Error loading videos:', error);
       }
+    }
+
+    // Set up Server-Sent Events connection
+    function setupEventSource() {
+      const eventSource = new EventSource('/updates');
+      
+      eventSource.onmessage = (event) => {
+        const newVideos = JSON.parse(event.data);
+        newVideos.forEach(addVideo);
+      };
+      
+      eventSource.onerror = () => {
+        console.log('EventSource error, reconnecting...');
+        setTimeout(setupEventSource, 1000);
+      };
     }
 
     function closePlayer() {
@@ -172,8 +230,11 @@
       player.style.display = 'none';
     }
 
-    // Initial load
-    loadVideos();
+    // Initialize everything
+    window.onload = () => {
+      loadInitialVideos();
+      setupEventSource();
+    };
   </script>
 </body>
 </html>

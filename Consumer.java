@@ -3,6 +3,7 @@ import java.net.*;
 import java.util.concurrent.*;
 import java.util.*;
 import java.text.SimpleDateFormat;
+import java.nio.charset.StandardCharsets;
 
 public class Consumer {
     private static final String OUTPUT_DIR = "output";
@@ -14,8 +15,25 @@ public class Consumer {
     public static void main(String[] args) {
         int port = 12345;
 
+        // Launch web server immediately in a separate thread
+        new Thread(() -> {
+            try {
+                VideoServer.main(new String[]{});
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }).start();
+
         try (ServerSocket serverSocket = new ServerSocket(port)) {
             System.out.println("Waiting for Producer...");
+
+        Thread.sleep(1000);
+
+        try {
+            java.awt.Desktop.getDesktop().browse(new java.net.URI("http://localhost:8000"));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
             Socket socket = serverSocket.accept();
             System.out.println("\nConnected to Producer!");
@@ -60,6 +78,9 @@ public class Consumer {
                                 break;
                             }
 
+                            String timestamp = getCurrentTimestamp();
+                            VideoServer.uploadTimestamps.put(data.fileName, timestamp);
+
                             // Process the file data by writing it to the output directory
                             File outputFile = new File(OUTPUT_DIR + "/" + data.fileName);
                             FileOutputStream fos = new FileOutputStream(outputFile);
@@ -75,6 +96,21 @@ public class Consumer {
                     }
                 });
             }
+
+            new Thread(() -> {
+                try {
+                    while (true) {
+                        File[] currentFiles = outputDir.listFiles();
+                        if (currentFiles != null && currentFiles.length > 0) {
+                            // Notify clients of new files
+                            VideoServer.notifyNewFiles(currentFiles);
+                        }
+                        Thread.sleep(1000); // Check every second
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }).start();
 
             // Read incoming files from Producer
             while (true) {
@@ -115,23 +151,6 @@ public class Consumer {
             System.out.println("Files in order of arrival:");
             for (String name : arrivalOrder) {
                 System.out.println(name);
-            }
-
-            new Thread(() -> {
-                try {
-                    VideoServer.main(new String[]{}); // launch server
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }).start();
-            
-            Thread.sleep(2000); // adjust if needed
-            
-            // Open the default web browser to the app
-            try {
-                java.awt.Desktop.getDesktop().browse(new java.net.URI("http://localhost:8000"));
-            } catch (Exception e) {
-                e.printStackTrace();
             }
             
 
