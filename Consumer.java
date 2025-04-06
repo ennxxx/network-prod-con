@@ -30,7 +30,7 @@ public class Consumer {
             System.out.println("Waiting for Producer...");
 
             Socket socket = serverSocket.accept();
-            System.out.println("Connected to Producer!");
+            System.out.println("\n=== Connected to Producer ===");
 
             DataInputStream in = new DataInputStream(socket.getInputStream());
 
