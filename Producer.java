@@ -4,7 +4,7 @@ import java.util.*;
 
 public class Producer {
     private static final int MAX_PRODUCER_FOLDERS = 5;
-    private static final String INPUT_DIR = "input";
+    private static final String INPUT_DIR = "prod_input";
 
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);

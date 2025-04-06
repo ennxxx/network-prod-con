@@ -4,7 +4,7 @@ import java.util.concurrent.*;
 import java.util.*;
 
 public class Consumer {
-    private static final String OUTPUT_DIR = "output";
+    private static final String OUTPUT_DIR = "cons_output";
 
     public static void main(String[] args) {
         int port = 12345;
