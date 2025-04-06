@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Uploaded Videos</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    .video-container { display: flex; flex-wrap: wrap; gap: 20px; }
+    video { width: 240px; height: 135px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h1>Uploaded Videos</h1>
+  <div class="video-container" id="videos"></div>
+
+  <script>
+    async function loadVideos() {
+      const res = await fetch('/list');
+      const videoList = await res.json();
+      const container = document.getElementById('videos');
+
+      videoList.forEach(name => {
+        const vid = document.createElement('video');
+        vid.src = `/videos/${name}`;
+        vid.controls = false;
+        vid.muted = true;
+        vid.addEventListener('mouseenter', () => {
+          vid.currentTime = 0;
+          vid.play();
+          setTimeout(() => vid.pause(), 10000); // Play 10s preview
+        });
+        vid.addEventListener('click', () => {
+          vid.controls = true;
+          vid.play();
+        });
+
+        container.appendChild(vid);
+      });
+    }
+
+    loadVideos();
+  </script>
+</body>
+</html>
