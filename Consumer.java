@@ -21,6 +21,16 @@ public class Consumer {
             int c = in.readInt();
             int q = in.readInt();
 
+            File outputDirectory = new File(OUTPUT_DIR);
+            if (outputDirectory.exists()) {
+                // If it exists, delete the directory and all contents
+                deleteDirectory(outputDirectory);
+            }
+            // Create a new empty output directory
+            if (!outputDirectory.exists()) {
+                outputDirectory.mkdirs();
+            }
+
             // This is to hold the file data that consumer threads will process
             // Consumer will block when the queue is empty (waiting for new files)
             // Queue will not exceed the size specified by the user
