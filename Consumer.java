@@ -8,8 +8,9 @@ import java.util.Date;
 public class Consumer {
     private static final String OUTPUT_DIR = "output";
 
-    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
-    String now = sdf.format(new Date());
+    private static String getCurrentTimestamp() {
+        return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date());
+    }
 
     public static void main(String[] args) {
         int port = 12345;
@@ -61,7 +62,7 @@ public class Consumer {
                             fos.write(data.bytes);
                             fos.close();
 
-                            System.out.println("Written: " + data.fileName + " at " + now);
+                            System.out.println("Written: " + data.fileName + " at " + getCurrentTimestamp());
 
                             arrivalOrder.add(data.fileName);
                         } catch (Exception e) {
@@ -93,7 +94,7 @@ public class Consumer {
                 if (!queue.offer(fd)) {
                     System.out.println("Dropped: " + fileName + " (Queue full)");
                 } else {
-                    System.out.println("Received: " + fileName + " at " + now);
+                    System.out.println("Received: " + fileName + " at " + getCurrentTimestamp());
                 }
             }
 

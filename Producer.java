@@ -8,8 +8,9 @@ public class Producer {
     private static final int MAX_PRODUCER_FOLDERS = 5;
     private static final String INPUT_DIR = "input";
 
-    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
-    String now = sdf.format(new Date());
+    private static String getCurrentTimestamp() {
+        return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date());
+    }
 
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
@@ -93,7 +94,7 @@ public class Producer {
                                         out.write(buffer, 0, bytesRead);
                                     }
                                     fis.close();
-                                    System.out.println("Sent: " + file.getName() + " at " + now);
+                                    System.out.println("Sent: " + file.getName() + " at " + getCurrentTimestamp());
                                 }
                             } catch (IOException e) {
                                 e.printStackTrace();
