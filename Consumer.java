@@ -34,7 +34,7 @@ public class Consumer {
                 // Create the output directory if it doesn't exist
                 outputDir.mkdir();
             }
-
+            
             // This is to hold the file data that consumer threads will process
             // Consumer will block when the queue is empty (waiting for new files)
             // Queue will not exceed the size specified by the user
@@ -67,35 +67,28 @@ public class Consumer {
             // Read incoming files from Producer
             while (true) {
                 String fileName = in.readUTF();
+                if (fileName.equals("END")) break;
 
-                // Process the file if it's not "END"
-                if (!fileName.equals("END")) {
-                    long fileSize = in.readLong();
-                    byte[] fileData = new byte[(int) fileSize];
+                long fileSize = in.readLong();
+                byte[] fileData = new byte[(int) fileSize];
 
-                    int totalRead = 0;
-                    while (totalRead < fileSize) {
-                        int read = in.read(fileData, totalRead, (int) fileSize - totalRead);
-                        if (read == -1) break;
-                        totalRead += read;
-                    }
+                int totalRead = 0;
+                while (totalRead < fileSize) {
+                    int read = in.read(fileData, totalRead, (int) fileSize - totalRead);
+                    if (read == -1) break;
+                    totalRead += read;
+                }
 
-                    // Insert file data into the queue
-                    // If the queue is full, the file will be dropped
-                    // and a message will be printed to the console
-                    FileData fd = new FileData(fileName, fileData);
-                    if (!queue.offer(fd)) {
-                        System.out.println("Dropped: " + fileName + " (Queue full)");
-                    } else {
-                        System.out.println("Received: " + fileName);
-                    }
+                // This inserts file data into the queue
+                // If the queue is full, the file will be dropped
+                // and a message will be printed to the console
+                FileData fd = new FileData(fileName, fileData);
+                if (!queue.offer(fd)) {
+                    System.out.println("Dropped: " + fileName + " (Queue full)");
                 } else {
-                    // Break the loop if the file name is "END"
-                    break;
+                    System.out.println("Received: " + fileName);
                 }
             }
-
-            System.out.println("\nAll files received. Stopping consumers...\n");
 
             // Stop consumers
             for (int i = 0; i < c; i++) {
