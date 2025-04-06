@@ -2,9 +2,14 @@ import java.io.*;
 import java.net.*;
 import java.util.concurrent.*;
 import java.util.*;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 public class Consumer {
     private static final String OUTPUT_DIR = "output";
+
+    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
+    String now = sdf.format(new Date());
 
     public static void main(String[] args) {
         int port = 12345;
@@ -56,6 +61,8 @@ public class Consumer {
                             fos.write(data.bytes);
                             fos.close();
 
+                            System.out.println("Written: " + data.fileName + " at " + now);
+
                             arrivalOrder.add(data.fileName);
                         } catch (Exception e) {
                             e.printStackTrace();
@@ -86,7 +93,7 @@ public class Consumer {
                 if (!queue.offer(fd)) {
                     System.out.println("Dropped: " + fileName + " (Queue full)");
                 } else {
-                    System.out.println("Received: " + fileName);
+                    System.out.println("Received: " + fileName " at " + now);
                 }
             }
 

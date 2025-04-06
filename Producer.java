@@ -1,10 +1,15 @@
 import java.io.*;
 import java.net.*;
 import java.util.*;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 public class Producer {
     private static final int MAX_PRODUCER_FOLDERS = 5;
     private static final String INPUT_DIR = "input";
+
+    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
+    String now = sdf.format(new Date());
 
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
@@ -53,7 +58,7 @@ public class Producer {
         }
 
         // Connecting to the consumer
-        String serverIp = "192.168.231.128"; // Replace with VM IP address
+        String serverIp = "172.16.146.131"; // Replace with VM IP address
         int port = 12345;
 
         try (Socket socket = new Socket(serverIp, port)) {
@@ -88,7 +93,7 @@ public class Producer {
                                         out.write(buffer, 0, bytesRead);
                                     }
                                     fis.close();
-                                    System.out.println("Sent: " + file.getName());
+                                    System.out.println("Sent: " + file.getName() " at " + now);
                                 }
                             } catch (IOException e) {
                                 e.printStackTrace();
