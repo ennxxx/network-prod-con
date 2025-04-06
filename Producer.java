@@ -69,6 +69,10 @@ public class Producer {
                 final int index = i + 1;
                 threads[i] = new Thread(() -> {
                     File folder = new File(INPUT_DIR + "/prod" + index);
+                    if (!folder.exists() || !folder.isDirectory()) {
+                        System.out.println("Error: Folder " + folder.getPath() + " does not exist or is not a directory.");
+                        continue; // Skip this producer thread if the folder doesn't exist
+                    }
                     File[] files = folder.listFiles();
 
                     if (files != null) {
@@ -103,6 +107,7 @@ public class Producer {
 
             // Send this signal to the consumer to indicate that all files have been sent
             out.writeUTF("END");
+            out.close();
 
         } catch (Exception e) {
             e.printStackTrace();

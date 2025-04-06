@@ -33,6 +33,7 @@ public class Consumer {
             System.out.println("\n=== Connected to Producer ===");
 
             DataInputStream in = new DataInputStream(socket.getInputStream());
+            DataOutputStream out = new DataOutputStream(socket.getOutputStream());
 
             int p = in.readInt();
             int c = in.readInt();
@@ -50,8 +51,6 @@ public class Consumer {
             }
 
             // This is to hold the file data that consumer threads will process
-            // Consumer will block when the queue is empty (waiting for new files)
-            // Queue will not exceed the size specified by the user
             BlockingQueue<FileData> queue = new ArrayBlockingQueue<>(q);
             List<String> arrivalOrder = Collections.synchronizedList(new ArrayList<>());
 
@@ -81,7 +80,9 @@ public class Consumer {
             // Read incoming files from Producer
             while (true) {
                 String fileName = in.readUTF();
-                if (fileName.equals("END")) break;
+                if (fileName.equals("END")) {
+                    break; // End signal from Producer
+                }
 
                 long fileSize = in.readLong();
                 byte[] fileData = new byte[(int) fileSize];
@@ -104,7 +105,7 @@ public class Consumer {
                 }
             }
 
-            // Stop consumers
+            // Stop consumers by sending the poison pill
             for (int i = 0; i < c; i++) {
                 queue.offer(FileData.POISON_PILL);
             }
@@ -117,6 +118,9 @@ public class Consumer {
             for (String name : arrivalOrder) {
                 System.out.println(name);
             }
+
+            // Close the socket after finishing the file processing
+            socket.close(); 
 
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
