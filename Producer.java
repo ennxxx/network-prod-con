@@ -23,10 +23,6 @@ public class Producer {
             System.out.println("Error: Only " + MAX_PRODUCER_FOLDERS + " input folders are available.");
             scanner.close();
             return;
-        } else if (producerThreads > 0 || consumerThreads > 0 || queueSize > 0) {
-            System.out.println("Error: Number of threads and queue size must be positive.");
-            scanner.close();
-            return;
         }
 
         // Connecting to the consumer
