@@ -3,7 +3,6 @@ import java.net.*;
 import java.util.concurrent.*;
 import java.util.*;
 import java.text.SimpleDateFormat;
-import java.util.Date;
 
 public class Consumer {
     private static final String OUTPUT_DIR = "output";
@@ -111,6 +110,24 @@ public class Consumer {
             for (String name : arrivalOrder) {
                 System.out.println(name);
             }
+
+            new Thread(() -> {
+                try {
+                    VideoServer.main(new String[]{}); // launch server
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }).start();
+            
+            Thread.sleep(2000); // adjust if needed
+            
+            // Open the default web browser to the app
+            try {
+                java.awt.Desktop.getDesktop().browse(new java.net.URI("http://localhost:8000"));
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            
 
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
