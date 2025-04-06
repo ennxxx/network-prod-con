@@ -13,6 +13,8 @@ public class Producer {
         int consumerThreads = 0;
         int queueSize = 0;
 
+        System.out.println("Preparing Producer...\n");
+
          // Input validation for producer threads
         while (true) {
             System.out.print("Enter number of producer threads: ");
@@ -55,7 +57,7 @@ public class Producer {
         int port = 12345;
 
         try (Socket socket = new Socket(serverIp, port)) {
-            System.out.println("Connected to Consumer!");
+            System.out.println("\nConnected to Consumer!");
 
             // Send user inputs to the consumer
             DataOutputStream out = new DataOutputStream(socket.getOutputStream());
