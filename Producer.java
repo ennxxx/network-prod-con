@@ -9,20 +9,43 @@ public class Producer {
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
 
-        System.out.print("Enter number of producer threads: ");
-        int producerThreads = scanner.nextInt();
+        int producerThreads = 0, consumerThreads = 0, queueSize = 0;
 
-        System.out.print("Enter number of consumer threads: ");
-        int consumerThreads = scanner.nextInt();
+        // Input validation for producer threads
+        while (true) {
+            System.out.print("Enter number of producer threads: ");
+            producerThreads = scanner.nextInt();
+            
+            // Check if the number of producer threads is valid and within the folder limit
+            if (producerThreads > 0 && producerThreads <= MAX_PRODUCER_FOLDERS) {
+                break; // Valid input
+            } else if (producerThreads <= 0) {
+                System.out.println("Error: The number of producer threads must be positive.");
+            } else {
+                System.out.println("Error: Only " + MAX_PRODUCER_FOLDERS + " input folders are available.");
+            }
+        }
 
-        System.out.print("Enter max queue size: ");
-        int queueSize = scanner.nextInt();
+        // Input validation for consumer threads
+        while (true) {
+            System.out.print("Enter number of consumer threads: ");
+            consumerThreads = scanner.nextInt();
+            if (consumerThreads > 0) {
+                break; // Valid input
+            } else {
+                System.out.println("Error: The number of consumer threads must be positive.");
+            }
+        }
 
-        // Need to add more validation checks
-        if (producerThreads > MAX_PRODUCER_FOLDERS) {
-            System.out.println("Error: Only " + MAX_PRODUCER_FOLDERS + " input folders are available.");
-            scanner.close();
-            return;
+        // Input validation for queue size
+        while (true) {
+            System.out.print("Enter max queue size (between 1 and 100): ");
+            queueSize = scanner.nextInt();
+            if (queueSize >= 1 && queueSize <= 100) {
+                break; // Valid input
+            } else {
+                System.out.println("Error: Queue size must be between 1 and 100.");
+            }
         }
 
         // Connecting to the consumer
