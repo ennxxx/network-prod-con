@@ -53,7 +53,12 @@ public class Consumer {
                     while (true) {
                         try {
                             FileData data = queue.take(); // Blocks thread until data is available
-                            if (data == FileData.POISON_PILL) break; // Signals to stop processing
+                            
+                             // Signals to stop processing
+                            if (data == FileData.POISON_PILL) {
+                                System.out.println("Consumer exiting...");
+                                break;
+                            }
 
                             // Process the file data by writing it to the output directory
                             File outputFile = new File(OUTPUT_DIR + "/" + data.fileName);
@@ -99,7 +104,8 @@ public class Consumer {
 
             // Stop consumers
             for (int i = 0; i < c; i++) {
-                queue.offer(FileData.POISON_PILL);
+                queue.put(FileData.POISON_PILL);
+                System.out.println("Sent poison pill to consumer " + i);
             }
 
             executor.shutdown();
