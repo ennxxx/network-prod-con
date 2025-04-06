@@ -1,42 +1,178 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Uploaded Videos</title>
+  <title>Video Upload Service</title>
   <style>
-    body { font-family: sans-serif; padding: 20px; }
-    .video-container { display: flex; flex-wrap: wrap; gap: 20px; }
-    video { width: 240px; height: 135px; cursor: pointer; }
+    body {
+      font-family: 'Roboto', Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: #f9f9f9;
+    }
+    h1 {
+      color: #333;
+      margin-bottom: 20px;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 10px;
+    }
+    .video-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 20px;
+      padding: 10px;
+    }
+    .video-card {
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .video-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+    .video-thumbnail {
+      position: relative;
+      width: 100%;
+      height: 140px;
+      overflow: hidden;
+    }
+    .video-thumbnail video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      background: #000;
+    }
+    .video-title {
+      padding: 10px;
+      font-weight: 500;
+      color: #333;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .video-player {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.9);
+      z-index: 1000;
+      display: none;
+      justify-content: center;
+      align-items: center;
+    }
+    .video-player video {
+      max-width: 80%;
+      max-height: 80%;
+    }
+    .close-player {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      color: white;
+      font-size: 30px;
+      cursor: pointer;
+    }
+    .refresh-btn {
+      padding: 8px 16px;
+      background: #4285f4;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-bottom: 20px;
+    }
+    .refresh-btn:hover {
+      background: #3367d6;
+    }
   </style>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
 </head>
 <body>
   <h1>Uploaded Videos</h1>
-  <div class="video-container" id="videos"></div>
+  <button class="refresh-btn" onclick="loadVideos()">Refresh Videos</button>
+  <div class="video-grid" id="videos"></div>
+
+  <div class="video-player" id="player">
+    <span class="close-player" onclick="closePlayer()">&times;</span>
+    <video id="fullscreen-video" controls></video>
+  </div>
 
   <script>
+    let hoverTimeout;
+    let previewTimeout;
+
     async function loadVideos() {
-      const res = await fetch('/list');
-      const videoList = await res.json();
-      const container = document.getElementById('videos');
+      try {
+        const res = await fetch('/list');
+        const videoList = await res.json();
+        const container = document.getElementById('videos');
+        container.innerHTML = '';
 
-      videoList.forEach(name => {
-        const vid = document.createElement('video');
-        vid.src = `/videos/${name}`;
-        vid.controls = false;
-        vid.muted = true;
-        vid.addEventListener('mouseenter', () => {
-          vid.currentTime = 0;
-          vid.play();
-          setTimeout(() => vid.pause(), 10000); // Play 10s preview
+        videoList.forEach(name => {
+          const card = document.createElement('div');
+          card.className = 'video-card';
+          
+          const thumbnail = document.createElement('div');
+          thumbnail.className = 'video-thumbnail';
+          
+          const vid = document.createElement('video');
+          vid.src = `/videos/${name}`;
+          vid.preload = 'metadata';
+          vid.muted = true;
+          
+          // Show preview on hover
+          vid.addEventListener('mouseenter', () => {
+            hoverTimeout = setTimeout(() => {
+              vid.currentTime = 0;
+              vid.play();
+              previewTimeout = setTimeout(() => vid.pause(), 10000);
+            }, 500);
+          });
+          
+          // Stop preview when mouse leaves
+          vid.addEventListener('mouseleave', () => {
+            clearTimeout(hoverTimeout);
+            clearTimeout(previewTimeout);
+            vid.pause();
+          });
+          
+          // Open fullscreen player on click
+          vid.addEventListener('click', () => {
+            const player = document.getElementById('player');
+            const fullscreenVideo = document.getElementById('fullscreen-video');
+            fullscreenVideo.src = vid.src;
+            fullscreenVideo.currentTime = vid.currentTime;
+            fullscreenVideo.muted = false;
+            player.style.display = 'flex';
+            fullscreenVideo.play();
+          });
+          
+          const title = document.createElement('div');
+          title.className = 'video-title';
+          title.textContent = name.replace('.mp4', '');
+          
+          thumbnail.appendChild(vid);
+          card.appendChild(thumbnail);
+          card.appendChild(title);
+          container.appendChild(card);
         });
-        vid.addEventListener('click', () => {
-          vid.controls = true;
-          vid.play();
-        });
-
-        container.appendChild(vid);
-      });
+      } catch (error) {
+        console.error('Error loading videos:', error);
+      }
     }
 
+    function closePlayer() {
+      const player = document.getElementById('player');
+      const fullscreenVideo = document.getElementById('fullscreen-video');
+      fullscreenVideo.pause();
+      player.style.display = 'none';
+    }
+
+    // Initial load
     loadVideos();
   </script>
 </body>
