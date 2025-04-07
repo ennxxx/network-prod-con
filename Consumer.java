@@ -135,7 +135,7 @@ public class Consumer {
                                 while (true) {
                                     String fileName = producerIn.readUTF();
                                     if (fileName.equals("END")) {
-                                        System.out.println("\033[DISCONNECTED] Producer disconnected from port " + portNum + "\033[0m");
+                                        System.out.println("\033[31m[DISCONNECTED] Producer disconnected from port " + portNum + "\033[0m");
                                         isRunning = false;
                                         break;
                                     };
