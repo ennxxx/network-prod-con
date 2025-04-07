@@ -155,7 +155,7 @@ public class Consumer {
                                 break;
 
                             } catch (IOException e) {
-                                System.out.println("Connection error on port " + portNum + ": " + e.getMessage());
+                                System.out.println("Connection error on port " + portNum + ": " + e.printStackTrace();));
                             }
                         }
 
