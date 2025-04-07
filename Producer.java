@@ -40,10 +40,10 @@ public class Producer {
         while (true) {
             System.out.print("Enter number of consumer threads: ");
             consumerThreads = scanner.nextInt();
-            if (consumerThreads > 0) {
+            if (consumerThreads >= 1 && consumerThreads <= 100) {
                 break; // Valid input
             } else {
-                System.out.println("Error: The number of consumer threads must be positive.");
+                System.out.println("Error: Number of consumer threads must be between 1 and 100.");
             }
         }
 
@@ -62,6 +62,12 @@ public class Producer {
         String serverIp = "172.16.146.131"; // Replace with VM IP address
         int port = 12345;
 
+        // Create a list of port numbers for the producer threads
+        List<Integer> producerPorts = new ArrayList<>();
+        for (int i = 0; i < producerThreads; i++) {
+            producerPorts.add(port + i + 1);
+        }
+
         try (Socket socket = new Socket(serverIp, port)) {
             System.out.println("\nConnected to Consumer!");
 
@@ -70,6 +76,9 @@ public class Producer {
             out.writeInt(producerThreads);
             out.writeInt(consumerThreads);
             out.writeInt(queueSize);
+            for (int producerPort : producerPorts) {
+                out.writeInt(producerPort);
+            }
 
             // Create an array of threads and assign each thread to a folder
             Thread[] threads = new Thread[producerThreads];
@@ -78,28 +87,34 @@ public class Producer {
                 threads[i] = new Thread(() -> {
                     File folder = new File(INPUT_DIR + "/prod" + index);
                     File[] files = folder.listFiles();
-
-                    if (files != null) {
-                        for (File file : files) {
-                            try {
-                                // This makes sure that multiple threads don't write to the output stream at the same time
-                                synchronized (out) {
-                                    out.writeUTF(file.getName()); // File name
-                                    out.writeLong(file.length()); // File size
-                                    
-                                    FileInputStream fis = new FileInputStream(file);
-                                    byte[] buffer = new byte[4096];
-                                    int bytesRead;
-                                    while ((bytesRead = fis.read(buffer)) != -1) {
-                                        out.write(buffer, 0, bytesRead);
+                    
+                    try(Socket producerSocket = new Socket(serverIp, producerPorts.get(index - 1))) {
+                        DataOutputStream out = new DataOutputStream(producerSocket.getOutputStream());
+                        System.out.println("Thread " + index + " connected to Consumer at port " + producerPorts.get(index - 1));
+                        if (files != null) {
+                            for (File file : files) {
+                                try {
+                                    // This makes sure that multiple threads don't write to the output stream at the same time
+                                    synchronized (out) {
+                                        out.writeUTF(file.getName()); // File name
+                                        out.writeLong(file.length()); // File size
+                                        
+                                        FileInputStream fis = new FileInputStream(file);
+                                        byte[] buffer = new byte[4096];
+                                        int bytesRead;
+                                        while ((bytesRead = fis.read(buffer)) != -1) {
+                                            out.write(buffer, 0, bytesRead);
+                                        }
+                                        fis.close();
+                                        System.out.println("Sent: " + file.getName() + " at " + getCurrentTimestamp());
                                     }
-                                    fis.close();
-                                    System.out.println("Sent: " + file.getName() + " at " + getCurrentTimestamp());
+                                } catch (IOException e) {
+                                    e.printStackTrace();
                                 }
-                            } catch (IOException e) {
-                                e.printStackTrace();
                             }
                         }
+                    } catch (IOException e) {
+                        e.printStackTrace();
                     }
                 });
                 threads[i].start();

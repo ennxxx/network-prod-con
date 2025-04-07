@@ -52,6 +52,12 @@ public class Consumer {
             int p = in.readInt();
             int c = in.readInt();
             int q = in.readInt();
+            
+            // Add code for the new inputs
+            List<Integer> producerPorts = new ArrayList<>();
+            for (int i = 0; i < p; i++) {
+                producerPorts.add(in.readInt());
+            }
 
             // Ensure output directory exists and is empty
             File outputDir = new File(OUTPUT_DIR);
@@ -122,29 +128,55 @@ public class Consumer {
             }).start();
 
             // Read incoming files from Producer
-            while (true) {
-                String fileName = in.readUTF();
-                if (fileName.equals("END")) break;
+            ExecutorService executor = Executors.newFixedThreadPool(producerPorts.size());
 
-                long fileSize = in.readLong();
-                byte[] fileData = new byte[(int) fileSize];
+            for (int port : producerPorts) {
+                executor.submit(() -> {
+                    try (ServerSocket serverSocket = new ServerSocket(port)) {
+                        System.out.println("Listening for producers on port: " + port);
 
-                int totalRead = 0;
-                while (totalRead < fileSize) {
-                    int read = in.read(fileData, totalRead, (int) fileSize - totalRead);
-                    if (read == -1) break;
-                    totalRead += read;
-                }
+                        while (true) {
+                            try (Socket socket = serverSocket.accept();
+                                DataInputStream in = new DataInputStream(socket.getInputStream())) {
+                                System.out.println("Producer connected on port: " + port);
+                                // Read files from the producer
+                                while (true) {
+                                    String fileName = in.readUTF();
+                                    if (fileName.equals("END")) break;
 
-                // This inserts file data into the queue
-                // If the queue is full, the file will be dropped
-                // and a message will be printed to the console
-                FileData fd = new FileData(fileName, fileData);
-                if (!queue.offer(fd)) {
-                    System.out.println("Dropped: " + fileName + " (Queue full)");
-                } else {
-                    System.out.println("Received: " + fileName + " at " + getCurrentTimestamp());
-                }
+                                    long fileSize = in.readLong();
+                                    byte[] fileData = new byte[(int) fileSize];
+
+                                    int totalRead = 0;
+                                    while (totalRead < fileSize) {
+                                        int read = in.read(fileData, totalRead, (int) fileSize - totalRead);
+                                        if (read == -1) break;
+                                        totalRead += read;
+                                    }
+
+                                    FileData fd = new FileData(fileName, fileData);
+                                    if (!queue.offer(fd)) {
+                                        System.out.println("Dropped: " + fileName + " (Queue full)");
+                                    } else {
+                                        System.out.println("Received from port " + port + ": " + fileName + " at " + getCurrentTimestamp());
+                                    }
+                                }
+                                // Close the socket after reading all files
+                                socket.close();
+                                System.out.println("Producer disconnected from port " + port);
+                                //exit the loop
+                                break;
+                            } 
+                            catch (IOException e) {
+                                System.out.println("Connection error on port " + port + ": " + e.getMessage());
+                            }
+                        }
+
+                    } 
+                    catch (IOException e) {
+                        System.out.println("Failed to open server socket on port " + port + ": " + e.getMessage());
+                    }
+                });
             }
 
             // Stop consumers
