@@ -123,6 +123,9 @@ public class Producer {
             for (Thread t : threads) {
                 t.join();
             }
+
+            out.writeUTF("END");
+            
         } catch (Exception e) {
             e.printStackTrace();
         }

@@ -48,9 +48,9 @@ public class Consumer {
 
             DataInputStream in = new DataInputStream(socket.getInputStream());
 
-            int p = in.readInt(); // number of producers
-            int c = in.readInt(); // number of consumers
-            int q = in.readInt(); // queue size
+            int p = in.readInt(); // Number of producers
+            int c = in.readInt(); // Number of consumers
+            int q = in.readInt(); // Queue size
 
             List<Integer> producerPorts = new ArrayList<>();
             for (int i = 0; i < p; i++) {
@@ -116,14 +116,14 @@ public class Consumer {
 
             // Start producer threads
             ExecutorService producerExecutor = Executors.newFixedThreadPool(producerPorts.size());
-            CountDownLatch producersDone = new CountDownLatch(producerPorts.size());
 
             for (int portNum : producerPorts) {
                 producerExecutor.submit(() -> {
                     try (ServerSocket producerSocket = new ServerSocket(portNum)) {
                         System.out.println("Listening for producers on port: " + portNum);
+                        Boolean isRunning = true;
 
-                        while (true) {
+                        while (isRunning) {
                             try (Socket producerConn = producerSocket.accept();
                                  DataInputStream producerIn = new DataInputStream(producerConn.getInputStream())) {
 
@@ -131,7 +131,11 @@ public class Consumer {
 
                                 while (true) {
                                     String fileName = producerIn.readUTF();
-                                    if (fileName.equals("END")) break;
+                                    if (fileName.equals("END")) {
+                                        System.out.println("Producer disconnected from port " + portNum);
+                                        isRunning = false;
+                                        break;
+                                    };
 
                                     long fileSize = producerIn.readLong();
                                     byte[] fileData = new byte[(int) fileSize];
@@ -147,13 +151,9 @@ public class Consumer {
                                     if (!queue.offer(fd)) {
                                         System.out.println("Dropped: " + fileName + " (Queue full)");
                                     } else {
-                                        System.out.println("Received from port " + port + ": " + fileName + " at " + getCurrentTimestamp());
+                                        System.out.println("Received from port " + portNum + ": " + fileName + " at " + getCurrentTimestamp());
                                     }
                                 }
-
-                                System.out.println("Producer disconnected from port " + portNum);
-                                break;
-
                             } catch (IOException e) {
                                 System.out.println("Connection error on port " + portNum + ": " + e.printStackTrace();));
                             }
@@ -161,9 +161,7 @@ public class Consumer {
 
                     } catch (IOException e) {
                         System.out.println("Failed to open server socket on port " + portNum + ": " + e.getMessage());
-                    } finally {
-                        producersDone.countDown();
-                    }
+                    } 
                 });
             }
 
