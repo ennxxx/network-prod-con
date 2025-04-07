@@ -14,8 +14,18 @@ q - Max queue length. For simplicity we will use a leaky bucket design, addition
 
 ## Producer
 
-Reads the a video file, uploads it to the media upload service (consumer).
+Reads the a video file, uploads it to the media upload service (consumer). Before running the program, make sure to update the IP address to point to your Consumer virtual machine.
+
+```
+javac Producer.java
+java Producer
+```
 
 ## Consumer
 
 Accepts simultaneous media uploads. Saves the uploaded videos to a single folder. Displays and previews the 10 seconds of the uploaded video file.
+
+```
+javac Consumer.java
+java Consumer
+```
