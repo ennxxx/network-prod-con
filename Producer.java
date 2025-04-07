@@ -123,10 +123,6 @@ public class Producer {
             for (Thread t : threads) {
                 t.join();
             }
-
-            // Send this signal to the consumer to indicate that all files have been sent
-            out.writeUTF("END");
-
         } catch (Exception e) {
             e.printStackTrace();
         }

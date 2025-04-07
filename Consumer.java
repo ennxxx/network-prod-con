@@ -15,7 +15,7 @@ public class Consumer {
     public static void main(String[] args) {
         int port = 12345;
 
-        // Launch web server immediately in a separate thread
+        // Launch web server immediately
         new Thread(() -> {
             try {
                 VideoServer.main(new String[]{});
@@ -35,25 +35,23 @@ public class Consumer {
 
         try (ServerSocket serverSocket = new ServerSocket(port)) {
             System.out.println("Waiting for Producer...");
+            Thread.sleep(1000);
 
-        Thread.sleep(1000);
-
-        try {
-            java.awt.Desktop.getDesktop().browse(new java.net.URI("http://localhost:8000"));
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+            try {
+                java.awt.Desktop.getDesktop().browse(new URI("http://localhost:8000"));
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
 
             Socket socket = serverSocket.accept();
             System.out.println("\nConnected to Producer!");
 
             DataInputStream in = new DataInputStream(socket.getInputStream());
 
-            int p = in.readInt();
-            int c = in.readInt();
-            int q = in.readInt();
-            
-            // Add code for the new inputs
+            int p = in.readInt(); // number of producers
+            int c = in.readInt(); // number of consumers
+            int q = in.readInt(); // queue size
+
             List<Integer> producerPorts = new ArrayList<>();
             for (int i = 0; i < p; i++) {
                 producerPorts.add(in.readInt());
@@ -62,37 +60,75 @@ public class Consumer {
             // Ensure output directory exists and is empty
             File outputDir = new File(OUTPUT_DIR);
             if (outputDir.exists()) {
-                // Delete all files in the output directory
                 for (File file : outputDir.listFiles()) {
-                    if (file.isFile()) {
-                        file.delete();
-                    }
+                    if (file.isFile()) file.delete();
                 }
             } else {
-                // Create the output directory if it doesn't exist
                 outputDir.mkdir();
             }
-            
-            // This is to hold the file data that consumer threads will process
-            // Consumer will block when the queue is empty (waiting for new files)
-            // Queue will not exceed the size specified by the user
+
             BlockingQueue<FileData> queue = new ArrayBlockingQueue<>(q);
             List<String> arrivalOrder = Collections.synchronizedList(new ArrayList<>());
 
-            ExecutorService producerExecutor = Executors.newFixedThreadPool(producerPorts.size());
+            // Start consumer threads
+            ExecutorService consumerExecutor = Executors.newFixedThreadPool(c);
+            for (int i = 0; i < c; i++) {
+                consumerExecutor.submit(() -> {
+                    while (true) {
+                        try {
+                            FileData data = queue.take();
+                            if (data == FileData.POISON_PILL) {
+                                System.out.println("Consumer exiting...");
+                                break;
+                            }
 
-            for (int producerPort : producerPorts) {
+                            String timestamp = getCurrentTimestamp();
+                            VideoServer.uploadTimestamps.put(data.fileName, timestamp);
+
+                            File outputFile = new File(OUTPUT_DIR + "/" + data.fileName);
+                            try (FileOutputStream fos = new FileOutputStream(outputFile)) {
+                                fos.write(data.bytes);
+                            }
+
+                            System.out.println("Written: " + data.fileName + " at " + getCurrentTimestamp());
+                            arrivalOrder.add(data.fileName);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                });
+            }
+
+            // Notify clients of new files
+            new Thread(() -> {
+                try {
+                    while (true) {
+                        File[] currentFiles = outputDir.listFiles();
+                        if (currentFiles != null && currentFiles.length > 0) {
+                            VideoServer.notifyNewFiles(currentFiles);
+                        }
+                        Thread.sleep(1000);
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }).start();
+
+            // Start producer threads
+            ExecutorService producerExecutor = Executors.newFixedThreadPool(producerPorts.size());
+            CountDownLatch producersDone = new CountDownLatch(producerPorts.size());
+
+            for (int portNum : producerPorts) {
                 producerExecutor.submit(() -> {
-                    try (ServerSocket producerSocket = new ServerSocket(producerPort)) {
-                        System.out.println("Listening for producers on port: " + producerPort);
+                    try (ServerSocket producerSocket = new ServerSocket(portNum)) {
+                        System.out.println("Listening for producers on port: " + portNum);
 
                         while (true) {
-                            try (Socket producerClientSocket = producerSocket.accept();
-                                DataInputStream producerIn = new DataInputStream(producerClientSocket.getInputStream())) {
-                                
-                                System.out.println("Producer connected on port: " + producerPort);
-                                
-                                // Read files from the producer
+                            try (Socket producerConn = producerSocket.accept();
+                                 DataInputStream producerIn = new DataInputStream(producerConn.getInputStream())) {
+
+                                System.out.println("Producer connected on port: " + portNum);
+
                                 while (true) {
                                     String fileName = producerIn.readUTF();
                                     if (fileName.equals("END")) break;
@@ -111,46 +147,50 @@ public class Consumer {
                                     if (!queue.offer(fd)) {
                                         System.out.println("Dropped: " + fileName + " (Queue full)");
                                     } else {
-                                        System.out.println("Received from port " + producerPort + ": " + fileName + " at " + getCurrentTimestamp());
+                                        System.out.println("Received from port " + port + ": " + fileName + " at " + getCurrentTimestamp());
                                     }
                                 }
 
-                                System.out.println("Producer disconnected from port " + producerPort);
+                                System.out.println("Producer disconnected from port " + portNum);
                                 break;
 
                             } catch (IOException e) {
-                                System.out.println("Connection error on port " + producerPort + ": " + e.getMessage());
+                                System.out.println("Connection error on port " + portNum + ": " + e.getMessage());
                             }
                         }
 
                     } catch (IOException e) {
-                        System.out.println("Failed to open server socket on port " + producerPort + ": " + e.getMessage());
+                        System.out.println("Failed to open server socket on port " + portNum + ": " + e.getMessage());
+                    } finally {
+                        producersDone.countDown();
                     }
                 });
             }
 
-            // Stop consumers
+            // Wait for producers to finish
+            producersDone.await();
+
+            // Send poison pills to stop consumers
             for (int i = 0; i < c; i++) {
                 System.out.println("Sent poison pill to consumer " + i);
                 queue.put(FileData.POISON_PILL);
             }
 
+            consumerExecutor.shutdown();
+            consumerExecutor.awaitTermination(10, TimeUnit.SECONDS);
             producerExecutor.shutdown();
-            producerExecutor.awaitTermination(10, TimeUnit.SECONDS);
 
             System.out.println("\n=== Upload Complete ===");
             System.out.println("Files in order of arrival:");
             for (String name : arrivalOrder) {
                 System.out.println(name);
             }
-            
 
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
     }
 
-    // Class to hold file data
     static class FileData {
         String fileName;
         byte[] bytes;
@@ -166,11 +206,8 @@ public class Consumer {
     private static void deleteDirectory(File directory) throws IOException {
         if (directory.isDirectory()) {
             for (File file : directory.listFiles()) {
-                if (file.isDirectory()) {
-                    deleteDirectory(file);
-                } else {
-                    file.delete();
-                }
+                if (file.isDirectory()) deleteDirectory(file);
+                else file.delete();
             }
         }
         directory.delete();
