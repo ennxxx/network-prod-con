@@ -79,77 +79,30 @@ public class Consumer {
             BlockingQueue<FileData> queue = new ArrayBlockingQueue<>(q);
             List<String> arrivalOrder = Collections.synchronizedList(new ArrayList<>());
 
-            // Start consumer threads
-            ExecutorService executor = Executors.newFixedThreadPool(c);
-            for (int i = 0; i < c; i++) {
-                executor.submit(() -> {
-                    while (true) {
-                        try {
-                            FileData data = queue.take(); // Blocks thread until data is available
-                            
-                             // Signals to stop processing
-                            if (data == FileData.POISON_PILL) {
-                                System.out.println("Consumer exiting...");
-                                break;
-                            }
+            ExecutorService producerExecutor = Executors.newFixedThreadPool(producerPorts.size());
 
-                            String timestamp = getCurrentTimestamp();
-                            VideoServer.uploadTimestamps.put(data.fileName, timestamp);
-
-                            // Process the file data by writing it to the output directory
-                            File outputFile = new File(OUTPUT_DIR + "/" + data.fileName);
-                            FileOutputStream fos = new FileOutputStream(outputFile);
-                            fos.write(data.bytes);
-                            fos.close();
-
-                            System.out.println("Written: " + data.fileName + " at " + getCurrentTimestamp());
-
-                            arrivalOrder.add(data.fileName);
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                    }
-                });
-            }
-
-            new Thread(() -> {
-                try {
-                    while (true) {
-                        File[] currentFiles = outputDir.listFiles();
-                        if (currentFiles != null && currentFiles.length > 0) {
-                            // Notify clients of new files
-                            VideoServer.notifyNewFiles(currentFiles);
-                        }
-                        Thread.sleep(1000); // Check every second
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }).start();
-
-            // Read incoming files from Producer
-            ExecutorService executor = Executors.newFixedThreadPool(producerPorts.size());
-
-            for (int port : producerPorts) {
-                executor.submit(() -> {
-                    try (ServerSocket serverSocket = new ServerSocket(port)) {
-                        System.out.println("Listening for producers on port: " + port);
+            for (int producerPort : producerPorts) {
+                producerExecutor.submit(() -> {
+                    try (ServerSocket producerSocket = new ServerSocket(producerPort)) {
+                        System.out.println("Listening for producers on port: " + producerPort);
 
                         while (true) {
-                            try (Socket socket = serverSocket.accept();
-                                DataInputStream in = new DataInputStream(socket.getInputStream())) {
-                                System.out.println("Producer connected on port: " + port);
+                            try (Socket producerClientSocket = producerSocket.accept();
+                                DataInputStream producerIn = new DataInputStream(producerClientSocket.getInputStream())) {
+                                
+                                System.out.println("Producer connected on port: " + producerPort);
+                                
                                 // Read files from the producer
                                 while (true) {
-                                    String fileName = in.readUTF();
+                                    String fileName = producerIn.readUTF();
                                     if (fileName.equals("END")) break;
 
-                                    long fileSize = in.readLong();
+                                    long fileSize = producerIn.readLong();
                                     byte[] fileData = new byte[(int) fileSize];
 
                                     int totalRead = 0;
                                     while (totalRead < fileSize) {
-                                        int read = in.read(fileData, totalRead, (int) fileSize - totalRead);
+                                        int read = producerIn.read(fileData, totalRead, (int) fileSize - totalRead);
                                         if (read == -1) break;
                                         totalRead += read;
                                     }
@@ -158,23 +111,20 @@ public class Consumer {
                                     if (!queue.offer(fd)) {
                                         System.out.println("Dropped: " + fileName + " (Queue full)");
                                     } else {
-                                        System.out.println("Received from port " + port + ": " + fileName + " at " + getCurrentTimestamp());
+                                        System.out.println("Received from port " + producerPort + ": " + fileName + " at " + getCurrentTimestamp());
                                     }
                                 }
-                                // Close the socket after reading all files
-                                socket.close();
-                                System.out.println("Producer disconnected from port " + port);
-                                //exit the loop
+
+                                System.out.println("Producer disconnected from port " + producerPort);
                                 break;
-                            } 
-                            catch (IOException e) {
-                                System.out.println("Connection error on port " + port + ": " + e.getMessage());
+
+                            } catch (IOException e) {
+                                System.out.println("Connection error on port " + producerPort + ": " + e.getMessage());
                             }
                         }
 
-                    } 
-                    catch (IOException e) {
-                        System.out.println("Failed to open server socket on port " + port + ": " + e.getMessage());
+                    } catch (IOException e) {
+                        System.out.println("Failed to open server socket on port " + producerPort + ": " + e.getMessage());
                     }
                 });
             }

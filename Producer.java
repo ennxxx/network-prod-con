@@ -89,21 +89,21 @@ public class Producer {
                     File[] files = folder.listFiles();
                     
                     try(Socket producerSocket = new Socket(serverIp, producerPorts.get(index - 1))) {
-                        DataOutputStream out = new DataOutputStream(producerSocket.getOutputStream());
+                        DataOutputStream threadOut = new DataOutputStream(producerSocket.getOutputStream());
                         System.out.println("Thread " + index + " connected to Consumer at port " + producerPorts.get(index - 1));
                         if (files != null) {
                             for (File file : files) {
                                 try {
                                     // This makes sure that multiple threads don't write to the output stream at the same time
-                                    synchronized (out) {
-                                        out.writeUTF(file.getName()); // File name
-                                        out.writeLong(file.length()); // File size
+                                    synchronized (threadOut) {
+                                        threadOut.writeUTF(file.getName()); // File name
+                                        threadOut.writeLong(file.length()); // File size
                                         
                                         FileInputStream fis = new FileInputStream(file);
                                         byte[] buffer = new byte[4096];
                                         int bytesRead;
                                         while ((bytesRead = fis.read(buffer)) != -1) {
-                                            out.write(buffer, 0, bytesRead);
+                                            threadOut.write(buffer, 0, bytesRead);
                                         }
                                         fis.close();
                                         System.out.println("Sent: " + file.getName() + " at " + getCurrentTimestamp());
