@@ -135,8 +135,8 @@ public class Consumer {
                 queue.put(FileData.POISON_PILL);
             }
 
-            executor.shutdown();
-            executor.awaitTermination(10, TimeUnit.SECONDS);
+            producerExecutor.shutdown();
+            producerExecutor.awaitTermination(10, TimeUnit.SECONDS);
 
             System.out.println("\n=== Upload Complete ===");
             System.out.println("Files in order of arrival:");
