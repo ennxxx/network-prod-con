@@ -117,6 +117,9 @@ public class Consumer {
             // Start producer threads
             ExecutorService producerExecutor = Executors.newFixedThreadPool(producerPorts.size());
 
+            // Use CountDownLatch to wait for all producer threads to finish (to properly send poison pills)
+            CountDownLatch latch = new CountDownLatch(producerPorts.size());
+
             for (int portNum : producerPorts) {
                 producerExecutor.submit(() -> {
                     try (ServerSocket producerSocket = new ServerSocket(portNum)) {
@@ -158,21 +161,27 @@ public class Consumer {
                                 System.out.println("Connection error on port " + portNum + ": " + e.getMessage());
                             }
                         }
-
-                        // Send poison pills to stop consumers
-                        for (int i = 0; i < c; i++) {
-                            System.out.println("Sent poison pill to consumer " + i);
-                            queue.offer(FileData.POISON_PILL);
-                        }
-
                     } catch (IOException e) {
                         System.out.println("Failed to open server socket on port " + portNum + ": " + e.getMessage());
-                    } 
+                    } finally {
+                        latch.countDown();
+                    }
                 });
             }
 
+            try {
+                latch.await();  // This blocks until the latch reaches zero (i.e., all producers finish)
+                // All producers are done, send poison pills to consumers
+                for (int i = 0; i < c; i++) {
+                    System.out.println("Sent poison pill to consumer " + i);
+                    queue.offer(FileData.POISON_PILL);
+                }
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
             consumerExecutor.shutdown();
-            consumerExecutor.awaitTermination(10, TimeUnit.SECONDS);
+            consumerExecutor.awaitTermination(10, TimeUnit.SECONDS); // Gracefully shut down consumers
             producerExecutor.shutdown();
 
             System.out.println("\n=== Upload Complete ===");
