@@ -44,7 +44,7 @@ public class Consumer {
             }
 
             Socket socket = serverSocket.accept();
-            System.out.println("\nConnected to Producer!");
+            System.out.println("\n=== Consumer Logs ===");
 
             DataInputStream in = new DataInputStream(socket.getInputStream());
 
@@ -78,7 +78,7 @@ public class Consumer {
                         try {
                             FileData data = queue.take();
                             if (data == FileData.POISON_PILL) {
-                                System.out.println("Consumer exiting...");
+                                System.out.println("\033[41m[EXIT] Consumer exiting...\033[0m");
                                 break;
                             }
 
@@ -123,19 +123,19 @@ public class Consumer {
             for (int portNum : producerPorts) {
                 producerExecutor.submit(() -> {
                     try (ServerSocket producerSocket = new ServerSocket(portNum)) {
-                        System.out.println("Listening for producers on port: " + portNum);
+                        System.out.println("Ready: Listening for producers on port " + portNum);
                         Boolean isRunning = true;
 
                         while (isRunning) {
                             try (Socket producerConn = producerSocket.accept();
                                  DataInputStream producerIn = new DataInputStream(producerConn.getInputStream())) {
 
-                                System.out.println("Producer connected on port: " + portNum);
+                                System.out.println("\033[32m[CONNECTED] Producer connected on port " + portNum + "\033[0m");
 
                                 while (true) {
                                     String fileName = producerIn.readUTF();
                                     if (fileName.equals("END")) {
-                                        System.out.println("Producer disconnected from port " + portNum);
+                                        System.out.println("\033[DISCONNECTED] Producer disconnected from port " + portNum + "\033[0m");
                                         isRunning = false;
                                         break;
                                     };
@@ -154,7 +154,7 @@ public class Consumer {
                                     if (!queue.offer(fd)) {
                                         System.out.println("Dropped: " + fileName + " (Queue full)");
                                     } else {
-                                        System.out.println("Received from port " + portNum + ": " + fileName + " at " + getCurrentTimestamp());
+                                        System.out.println("Received: " + fileName + " from port " + portNum + " at " + getCurrentTimestamp());
                                     }
                                 }
                             } catch (IOException e) {
@@ -168,12 +168,11 @@ public class Consumer {
                     }
                 });
             }
-
             try {
                 latch.await();  // This blocks until the latch reaches zero (i.e., all producers finish)
                 // All producers are done, send poison pills to consumers
                 for (int i = 0; i < c; i++) {
-                    System.out.println("Sent poison pill to consumer " + i);
+                    System.out.println("Dropped: Sent poison pill to consumer " + i);
                     queue.offer(FileData.POISON_PILL);
                 }
             } catch (InterruptedException e) {

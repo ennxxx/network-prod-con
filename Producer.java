@@ -69,7 +69,7 @@ public class Producer {
         }
 
         try (Socket socket = new Socket(serverIp, port)) {
-            System.out.println("\nConnected to Consumer!");
+            System.out.println("\n=== Producer Logs ===");
 
             // Send user inputs to the consumer
             DataOutputStream out = new DataOutputStream(socket.getOutputStream());
@@ -90,7 +90,7 @@ public class Producer {
                     
                     try(Socket producerSocket = new Socket(serverIp, producerPorts.get(index - 1))) {
                         DataOutputStream threadOut = new DataOutputStream(producerSocket.getOutputStream());
-                        System.out.println("Thread " + index + " connected to Consumer at port " + producerPorts.get(index - 1));
+                        System.out.println("\033[32m[CONNECTED] Thread " + index + " to Consumer at port " + producerPorts.get(index - 1) + "\033[0m");
                         if (files != null) {
                             for (File file : files) {
                                 try {
