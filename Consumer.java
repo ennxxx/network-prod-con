@@ -172,7 +172,7 @@ public class Consumer {
                 latch.await();  // This blocks until the latch reaches zero (i.e., all producers finish)
                 // All producers are done, send poison pills to consumers
                 for (int i = 0; i < c; i++) {
-                    System.out.println("Dropped: Sent poison pill to consumer " + i);
+                    System.out.println("\033[35m[ENDING] Sent poison pill to consumer " + i + "\033[0m");
                     queue.offer(FileData.POISON_PILL);
                 }
             } catch (InterruptedException e) {
