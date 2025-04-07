@@ -162,7 +162,7 @@ public class Consumer {
                         // Send poison pills to stop consumers
                         for (int i = 0; i < c; i++) {
                             System.out.println("Sent poison pill to consumer " + i);
-                            queue.put(FileData.POISON_PILL);
+                            queue.offer(FileData.POISON_PILL);
                         }
 
                     } catch (IOException e) {
