@@ -165,9 +165,6 @@ public class Consumer {
                 });
             }
 
-            // Wait for producers to finish
-            producersDone.await();
-
             // Send poison pills to stop consumers
             for (int i = 0; i < c; i++) {
                 System.out.println("Sent poison pill to consumer " + i);
