@@ -149,8 +149,8 @@ public class Consumer {
 
             // Stop consumers
             for (int i = 0; i < c; i++) {
-                queue.put(FileData.POISON_PILL);
                 System.out.println("Sent poison pill to consumer " + i);
+                queue.put(FileData.POISON_PILL);
             }
 
             executor.shutdown();
