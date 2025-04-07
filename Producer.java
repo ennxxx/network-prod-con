@@ -113,19 +113,19 @@ public class Producer {
                                 }
                             }
                         }
+                        threadOut.writeUTF("END");
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
                 });
                 threads[i].start();
             }
+            
             // Wait for all producer threads to finish
             for (Thread t : threads) {
                 t.join();
             }
 
-            out.writeUTF("END");
-            
         } catch (Exception e) {
             e.printStackTrace();
         }
