@@ -99,6 +99,8 @@ public class Producer {
                                         threadOut.writeUTF(file.getName()); // File name
                                         threadOut.writeLong(file.length()); // File size
                                         
+                                        print("Video File: " + file.getName() + "found with size " + file.length() + " bytes");
+                                        
                                         FileInputStream fis = new FileInputStream(file);
                                         byte[] buffer = new byte[4096];
                                         int bytesRead;
