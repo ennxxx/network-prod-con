@@ -1,6 +1,6 @@
 # Networked Producer and Consumer
 
-Producer-consumer exercise involving file writes and network sockets. This includes concurrent programming, file I/O, queueing, and network communication. It simulates a simulation of a media upload service. Both the producer and consumer runs on a diffrent virtual machine and communicate with each other via the network.
+Producer-consumer exercise involving file writes and network sockets. This includes concurrent programming, file I/O, queueing, and network communication. It simulates a simulation of a media upload service. Both the producer and consumer runs on a different virtual machine and communicate with each other via the network.
 
 ```
 The program accepts inputs from the user.
